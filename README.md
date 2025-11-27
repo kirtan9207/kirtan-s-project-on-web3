@@ -132,3 +132,11 @@ Add admin moderation features
 Emit events for each new post
 
 Build a React / Next.js frontend
+
+
+
+
+🙌 Contributions
+
+Feel free to open issues or submit PRs to improve this project.
+This is meant to be an educational and open beginner project.
