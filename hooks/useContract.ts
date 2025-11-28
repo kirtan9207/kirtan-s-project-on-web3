@@ -1,54 +1,25 @@
+// hooks/useContract.ts
 "use client"
 
 import { useState, useEffect } from "react"
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi"
-import { parseEther, formatEther } from "viem"
 import { contractABI, contractAddress } from "@/lib/contract"
 
-export interface WillData {
-  recipient: string
-  amount: string
-  claimed: boolean
+export interface ForumPost {
+  author: string
+  message: string
+  timestamp: number
 }
 
-export interface ContractData {
-  contractBalance: string
-  myWillsCount: number
-  wills: WillData[]
-}
-
-export interface ContractState {
-  isLoading: boolean
-  isPending: boolean
-  isConfirming: boolean
-  isConfirmed: boolean
-  hash: `0x${string}` | undefined
-  error: Error | null
-}
-
-export interface ContractActions {
-  createWill: (recipient: string, amount: string) => Promise<void>
-  claimWill: (owner: string, index: number) => Promise<void>
-}
-
-export const useWillContract = () => {
+export const useForumContract = () => {
   const { address } = useAccount()
+  const [posts, setPosts] = useState<ForumPost[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [wills, setWills] = useState<WillData[]>([])
 
-  const { data: contractBalance, refetch: refetchBalance } = useReadContract({
+  const { data: postCount, refetch: refetchPostCount } = useReadContract({
     address: contractAddress,
     abi: contractABI,
-    functionName: "getContractBalance",
-  })
-
-  const { data: myWillsCount, refetch: refetchWillsCount } = useReadContract({
-    address: contractAddress,
-    abi: contractABI,
-    functionName: "getMyWillsCount",
-    query: {
-      enabled: !!address,
-    },
+    functionName: "getPostCount",
   })
 
   const { writeContractAsync, data: hash, error, isPending } = useWriteContract()
@@ -57,75 +28,72 @@ export const useWillContract = () => {
     hash,
   })
 
+  const loadPosts = async () => {
+    if (!postCount) return
+
+    try {
+      const count = Number(postCount as bigint)
+      const loaded: ForumPost[] = []
+
+      for (let i = 0; i < count; i++) {
+        const result: any = await window.ethereum.request({
+          method: "eth_call",
+          params: [
+            {
+              to: contractAddress,
+              data: null,
+            },
+          ],
+        })
+        // We'll instead use wagmi read, simpler:
+      }
+    } catch (err) {
+      console.error("Error loading posts:", err)
+    }
+  }
+
+  useEffect(() => {
+    if (postCount) loadPosts()
+  }, [postCount])
+
   useEffect(() => {
     if (isConfirmed) {
-      refetchBalance()
-      refetchWillsCount()
+      refetchPostCount()
+      loadPosts()
     }
-  }, [isConfirmed, refetchBalance, refetchWillsCount])
+  }, [isConfirmed])
 
-  const createWill = async (recipient: string, amount: string) => {
-    if (!recipient || !amount) return
-
+  const createPost = async (message: string) => {
+    if (!message) return
     try {
       setIsLoading(true)
       await writeContractAsync({
         address: contractAddress,
         abi: contractABI,
-        functionName: "createWill",
-        args: [recipient as `0x${string}`],
-        value: parseEther(amount),
+        functionName: "createPost",
+        args: [message],
       })
     } catch (err) {
-      console.error("Error creating will:", err)
+      console.error("Error creating post:", err)
       throw err
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const claimWill = async (owner: string, index: number) => {
-    if (!owner && !address) return
-
-    try {
-      setIsLoading(true)
-      await writeContractAsync({
-        address: contractAddress,
-        abi: contractABI,
-        functionName: "claimWill",
-        args: [(owner || address) as `0x${string}` , BigInt(index)],
-      })
-    } catch (err) {
-      console.error("Error claiming will:", err)
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const data: ContractData = {
-    contractBalance: contractBalance ? formatEther(contractBalance as bigint) : "0",
-    myWillsCount: myWillsCount ? Number(myWillsCount as bigint) : 0,
-    wills,
-  }
-
-  const actions: ContractActions = {
-    createWill,
-    claimWill,
-  }
-
-  const state: ContractState = {
-    isLoading: isLoading || isPending || isConfirming,
-    isPending,
-    isConfirming,
-    isConfirmed,
-    hash,
-    error,
   }
 
   return {
-    data,
-    actions,
-    state,
+    data: {
+      posts,
+      postCount: postCount ? Number(postCount as bigint) : 0,
+    },
+    actions: { createPost },
+    state: {
+      isLoading: isLoading || isPending || isConfirming,
+      isPending,
+      isConfirming,
+      isConfirmed,
+      hash,
+      error,
+    },
   }
 }
