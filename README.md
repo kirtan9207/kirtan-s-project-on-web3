@@ -1,12 +1,12 @@
 
-# Simple Forum dApp
 
 ## Contract Address
 **0x43e359E94803394097a5210E58E39E933108d09e**  
 View on Explorer:  
 https://coston2-explorer.flare.network/address/0x43e359E94803394097a5210E58E39E933108d09e
 
----
+---<img width="1512" height="982" alt="image" src="https://github.com/user-attachments/assets/6ea6d860-e52a-48d4-acce-4adf11342a23" />
+
 
 ## Project Description
 Simple Forum is a decentralized message board built on the Flare (Coston2) blockchain.  
